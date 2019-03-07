@@ -1,1 +1,12 @@
-glfw
+*.sln
+*.vs
+*.exe
+*.ilk
+*.pdb
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.log
+*.obj
+*.idb
+*.tlog
