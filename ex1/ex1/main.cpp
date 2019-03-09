@@ -26,7 +26,7 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	// 使用核心模式
 
 	/* 创建一个窗口对象	*/
-	GLFWwindow* window = glfwCreateWindow(850, 600, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(960, 650, "LearnOpenGL", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -53,41 +53,48 @@ int main() {
 	ImGui::StyleColorsClassic();
 
 	//初始化各种数据
-	ImVec4 top_color = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
-	ImVec4 left_color = ImVec4(1.0f, 0.0f, 0.0f, 1.00f);
-	ImVec4 right_color = ImVec4(0.0f, 0.0f, 1.0f, 1.00f);
-	ImVec4 bottom_color = ImVec4(0.0f, 1.0f, 1.0f, 1.00f);
-	ImVec4 same_color = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+	ImVec4 left_down_color = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+	ImVec4 right_down_color = ImVec4(1.0f, 0.0f, 0.0f, 1.00f);
+	ImVec4 right_up_color = ImVec4(0.0f, 0.0f, 1.0f, 1.00f);
+	ImVec4 left_up_color = ImVec4(0.0f, 1.0f, 1.0f, 1.00f);
+	ImVec4 init_color = ImVec4(1.0f, 0.5f, 0.2f, 1.0f);
 	bool ImGui = true;
-	bool the_same_color = false;
-	bool draw_trangle_without_render = false;
-	bool draw_trangle = false;
-	bool bonus_draw_line = false;
-	bool bonus_draw_another_trangle = false;
+	bool wireframe_mode = false;
+	bool draw_line = false;
+	bool draw_point = false;
+	bool draw_triangle = false;
 	unsigned int VBO, VAO, EBO;
 
 	// 渲染循环
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
 
-		if (the_same_color) {
-			top_color = same_color;
-			left_color = same_color;
-			right_color = same_color;
-			bottom_color = same_color;
+		if (wireframe_mode) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
 
+		// 坐标点集
 		float vertices[] = {
-			// 坐标              // 颜色
-			0.2f, -0.2f, 0.0f,  right_color.x, right_color.y, right_color.z,  // bottom right
-			-0.2f, -0.2f, 0.0f, left_color.x, left_color.y, left_color.z,  // bottom left
-			0.0f,  0.2f, 0.0f,  top_color.x, top_color.y, top_color.z,   // top 
-			0.0f,  -0.8f, 0.0f,  bottom_color.x, bottom_color.y, bottom_color.z   // bottom
-		};
+			// 三角形             
+			0.3f, 0.3f, 0.0f, right_up_color.x, right_up_color.y, right_up_color.z, 
+			0.3f, -0.3f, 0.0f, right_down_color.x, right_down_color.y, right_down_color.z,
+			-0.3f, -0.3f, 0.0f, left_down_color.x, left_down_color.y, left_down_color.z,
+			-0.3f, 0.3f, 0.0f, left_up_color.x, left_up_color.y, left_up_color.z,
+			// 线段
+			0.5f, -0.3f, 0.0f, right_down_color.x, right_down_color.y, right_down_color.z,
+			0.5f, 0.3f, 0.0f, right_up_color.x, right_up_color.y, right_up_color.z,
+			// 点
+			0.65, 0.3f, 0.0f, right_down_color.x, right_down_color.y, right_down_color.z,
+			0.65, -0.3f, 0.0f, right_up_color.x, right_up_color.y, right_up_color.z,
+			0.65, 0.0f, 0.0f, left_down_color.x, left_down_color.y, left_down_color.z
+		};	
 
 		unsigned int indices[] = { // 注意索引从0开始
 			0, 1, 2, // 第一个三角形
-			0, 1, 3  // 第二个三角形
+			0, 2, 3  // 第二个三角形
 		};
 
 		//生成VAO、VBO、EBO对象
@@ -107,7 +114,6 @@ int main() {
 		glEnableVertexAttribArray(0);
 		// 5. 设定顶点颜色属性指针
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-		//glEnableVertexAttribArray(1);
 		// 6.创建一个程序对象
 		// 绘制出三角形
 		myShader.use(); // 激活程序对象
@@ -119,50 +125,50 @@ int main() {
 		ImGui::NewFrame();
 		ImGui::Begin("Edit color", &ImGui, ImGuiWindowFlags_MenuBar);
 
-		ImGui::ColorEdit3("Basic triangle -- top color", (float*)&top_color);
-		ImGui::ColorEdit3("Basic triangle -- left color", (float*)&left_color);
-		ImGui::ColorEdit3("Basic triangle -- right color", (float*)&right_color);
-		ImGui::ColorEdit3("Bonus triangle -- bottom color", (float*)&bottom_color);
-		ImGui::ColorEdit3("Optional -- the same color", (float*)&same_color);
+		ImGui::ColorEdit3("left-up", (float*)&left_up_color);
+		ImGui::ColorEdit3("right-up", (float*)&right_up_color);
+		ImGui::ColorEdit3("left-down", (float*)&left_down_color);
+		ImGui::ColorEdit3("right-down", (float*)&right_down_color);
 
-		ImGui::Checkbox("the same color", &the_same_color);
-		ImGui::Checkbox("Draw triangle without rendering", &draw_trangle_without_render);
-		ImGui::Checkbox("Basic draw triangle", &draw_trangle);
-		ImGui::Checkbox("Bonus draw line", &bonus_draw_line);
-		ImGui::Checkbox("Bonus draw another triangle", &bonus_draw_another_trangle);
+		ImGui::Checkbox("Wireframe Mode", &wireframe_mode);
+		ImGui::Checkbox("draw line", &draw_line);
+		ImGui::Checkbox("draw point", &draw_point);
+		ImGui::Checkbox("draw another triangle", &draw_triangle);
 		ImGui::End();
 
 		// 渲染窗口颜色
 		int view_width, view_height;
 		glfwGetFramebufferSize(window, &view_width, &view_height);
 		glViewport(0, 0, view_width, view_height);
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		//画Basic 三角形，没有加入渲染
-		if (draw_trangle_without_render) {
-			glBindVertexArray(VAO);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
-		}
+		// 渲染三角形
+		glEnableVertexAttribArray(1);
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-		// 渲染Basic 三角形
-		if (draw_trangle) {
+		// 渲染线段
+		if (draw_line) {
 			glEnableVertexAttribArray(1);
 			glBindVertexArray(VAO);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glDrawArrays(GL_LINE_STRIP, 4, 2);
 		}
 
-		// 渲染Bonus 线段
-		if (bonus_draw_line) {
+		// 渲染点
+		if (draw_point) {
 			glEnableVertexAttribArray(1);
 			glBindVertexArray(VAO);
-			glDrawArrays(GL_LINE_STRIP, 0, 2);
+			glPointSize(3.0f);
+			glDrawArrays(GL_POINTS, 6, 1);
+			glDrawArrays(GL_POINTS, 7, 1);
+			glDrawArrays(GL_POINTS, 8, 1);
 		}
 
-		// 渲染Bonus 三角形
-		if (bonus_draw_another_trangle) {
+		// 渲染第二个三角形
+		if (draw_triangle) {
 			glEnableVertexAttribArray(1);
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
