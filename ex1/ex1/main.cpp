@@ -37,7 +37,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSwapInterval(1);
 
-	// GLAD 载入
+	// 初始化 GLAD 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return -1;
@@ -57,7 +57,8 @@ int main() {
 	ImVec4 right_down_color = ImVec4(1.0f, 0.0f, 0.0f, 1.00f);
 	ImVec4 right_up_color = ImVec4(0.0f, 0.0f, 1.0f, 1.00f);
 	ImVec4 left_up_color = ImVec4(0.0f, 1.0f, 1.0f, 1.00f);
-	ImVec4 init_color = ImVec4(1.0f, 0.5f, 0.2f, 1.0f);
+	ImVec4 total_color = ImVec4(1.0f, 0.5f, 0.2f, 1.0f);
+	bool unite = true;
 	bool ImGui = true;
 	bool wireframe_mode = false;
 	bool draw_line = false;
@@ -68,6 +69,13 @@ int main() {
 	// 渲染循环
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
+
+		if (unite) {
+			left_up_color = total_color;
+			right_down_color = total_color;
+			right_up_color = total_color;
+			left_down_color = total_color;
+		}
 
 		if (wireframe_mode) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -125,11 +133,13 @@ int main() {
 		ImGui::NewFrame();
 		ImGui::Begin("Edit color", &ImGui, ImGuiWindowFlags_MenuBar);
 
+		ImGui::ColorEdit3("total color", (float*)&total_color);
 		ImGui::ColorEdit3("left-up", (float*)&left_up_color);
 		ImGui::ColorEdit3("right-up", (float*)&right_up_color);
 		ImGui::ColorEdit3("left-down", (float*)&left_down_color);
 		ImGui::ColorEdit3("right-down", (float*)&right_down_color);
 
+		ImGui::Checkbox("Unite mode", &unite);
 		ImGui::Checkbox("Wireframe Mode", &wireframe_mode);
 		ImGui::Checkbox("draw line", &draw_line);
 		ImGui::Checkbox("draw point", &draw_point);
