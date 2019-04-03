@@ -79,7 +79,7 @@ int main() {
 	ImGui::StyleColorsClassic();
 
 	// 创建着色器
-	Shader myShader("shader.vs.glsl", "shader.fs.glsl");
+	Shader myShader("shader.vs", "shader.fs");
 	
 	// 初始化各项数据
 	int draw_type = 0;
