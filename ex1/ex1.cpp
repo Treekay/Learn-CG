@@ -43,7 +43,7 @@ int main() {
 		return -1;
 	}
 
-	Shader myShader("shader.vs", "shader.fs");
+	Shader myShader("../../ex1/shader.vs", "../../ex1/shader.fs");
 
 	//创建并绑定ImGui
 	ImGui::CreateContext();
@@ -58,7 +58,7 @@ int main() {
 	ImVec4 right_up_color = ImVec4(0.0f, 0.0f, 1.0f, 1.00f);
 	ImVec4 left_up_color = ImVec4(0.0f, 1.0f, 1.0f, 1.00f);
 	ImVec4 total_color = ImVec4(1.0f, 0.5f, 0.2f, 1.0f);
-	bool unite = true;
+	bool unite = false;
 	bool ImGui = true;
 	bool wireframe_mode = false;
 	bool draw_line = false;
