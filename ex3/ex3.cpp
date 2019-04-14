@@ -118,6 +118,18 @@ int main() {
 
 	// VAO, VBO
 	unsigned int VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	// 绑定顶点数组对象
+	glBindVertexArray(VAO);
+	// VBO
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	// 位置属性
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// 颜色属性
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
 	//创建并绑定ImGui
 	ImGui::CreateContext();
@@ -137,19 +149,6 @@ int main() {
 		// 渲染
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // 背景颜色
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// 清除缓存
-
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &VBO);
-		// 绑定顶点数组对象
-		glBindVertexArray(VAO);
-		// VBO
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		// 位置属性
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// 颜色属性
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
 		//	调用着色器
 		myShader.use();
@@ -182,6 +181,7 @@ int main() {
 
 			ImGui::Text("Display Bonus");
 			ImGui::Checkbox("bonus", &mode);
+
 			ImGui::End();
 		}
 
@@ -221,7 +221,7 @@ int main() {
 				}
 				else if (y_axis >= 0.8f) {
 					y_add = false;
-				}
+				} 
 			}
 			// 在 XoZ 平面上旋转
 			if (auto_rotate) {
@@ -307,8 +307,8 @@ int main() {
 				}
 			}
 			model = glm::rotate(model, glm::radians(bonus_ratio), glm::vec3(0.0f, 1.0f, 0.0f)); // 在 XoZ 平面上旋转
-			model = glm::translate(model, glm::vec3(bonus_x_axis, bonus_y_axis, 0.0f)); // 移动
-			model = glm::scale(model, glm::vec3(x_scale, y_scale, z_scale));// 回弹
+			model = glm::translate(model, glm::vec3(bonus_x_axis, bonus_y_axis, 0.0f)); // 平移移动
+			model = glm::scale(model, glm::vec3(x_scale, y_scale, z_scale));// 放大缩小
 		}
 
 		unsigned int modelLoc = glGetUniformLocation(myShader.ID, "model");
