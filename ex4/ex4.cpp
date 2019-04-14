@@ -19,19 +19,18 @@ using namespace std;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // 设置窗口大小
 const unsigned int SCR_WIDTH = 1380;
 const unsigned int SCR_HEIGHT = 800;
 
 // 初始化摄像机
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
-// timing
+const float SPEED = 2.5f;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
@@ -53,7 +52,6 @@ int main() {
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
 
 	//// 告知 GLFW 捕捉鼠标动作
 	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -114,7 +112,7 @@ int main() {
 	enum function_select { orthographic_projection, perspective_projection, bonus };
 	int mode = 0;
 	bool view_changing = false;
-	float ortho_left = -0.5f, ortho_right = 0.5f, ortho_bottom = 0.5f, ortho_top = -0.5f, ortho_near = 0.06f, ortho_far = 0.5f;
+	float ortho_left = -6.0f, ortho_right = 6.0f, ortho_bottom = 5.0f, ortho_top = -5.0f, ortho_near = -2.0f, ortho_far = 5.5f;
 	float FoV = glm::radians(45.0f), aspect_ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
 
 	// VAO, VBO
@@ -174,12 +172,12 @@ int main() {
 			// 正交投影选项
 			if (mode == orthographic_projection) {
 				// 各项参数
-				ImGui::SliderFloat("left", &ortho_left, -1.0f, 1.0f);
-				ImGui::SliderFloat("right", &ortho_right, -1.0f, 1.0f);
-				ImGui::SliderFloat("bottom", &ortho_bottom, -1.0f, 1.0f);
-				ImGui::SliderFloat("top", &ortho_top, -1.0f, 1.0f);
-				ImGui::SliderFloat("near", &ortho_near, -1.0f, 1.0f);
-				ImGui::SliderFloat("far", &ortho_far, -1.0f, 1.0f);
+				ImGui::SliderFloat("left", &ortho_left, -20.0f, 20.0f);
+				ImGui::SliderFloat("right", &ortho_right, -20.0f, 20.0f);
+				ImGui::SliderFloat("bottom", &ortho_bottom, -20.0f, 20.0f);
+				ImGui::SliderFloat("top", &ortho_top, -20.0f, 20.0f);
+				ImGui::SliderFloat("near", &ortho_near, -3.0f, 3.0f);
+				ImGui::SliderFloat("far", &ortho_far, -10.0f, 10.0f);
 			}
 			// 透视投影选项
 			else if (mode == perspective_projection) {
@@ -194,9 +192,6 @@ int main() {
 			}
 			ImGui::End();
 		}
-		// 渲染 GUI
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// 创建坐标变换
 		glm::mat4 model = glm::mat4(1.0f); // 初始化矩阵
@@ -207,27 +202,18 @@ int main() {
 
 		/* 正交投影 */
 		if (mode == orthographic_projection) {
-			// 调整观察视角
-			view = glm::translate(view, glm::vec3(0.0f, 0.0f, -15.0f));		// 调整位置以便观察到整个 cube
-			//view = glm::rotate(view, glm::radians(25.0f), glm::vec3(1.0f, -1.0f, 0.0f));	// 变换角度使其更有立体效果
-			// 正交投影
-			glUniformMatrix4fv(modelLoc, 1, GL_TRUE, glm::value_ptr(model));
-			glUniformMatrix4fv(viewLoc, 1, GL_TRUE, &view[0][0]);
 			projection = glm::ortho(ortho_left, ortho_right, ortho_bottom, ortho_top, ortho_near, ortho_far);
 		}
 		/* 透视投影 */
 		else {
 			if (!view_changing) {
-				// 将 cube 放置在 (-1.5, 0.5, -1.5) 的位置
-				model = glm::translate(model, glm::vec3(-1.5f, 0.5f, -1.5f));
-				// 调整观察视角
-				view = glm::translate(view, glm::vec3(0.0f, 0.0f, -15.0f));		// 调整位置以便观察到整个 cube
-				view = glm::rotate(view, glm::radians(25.0f), glm::vec3(1.0f, -1.0f, 0.0f));	// 变换角度使其更有立体效果
+				model = glm::translate(model, glm::vec3(-1.5f, 0.5f, -1.5f));  // 将 cube 放置在 (-1.5, 0.5, -1.5) 的位置
+				view = glm::translate(view, glm::vec3(0.0f, 0.0f, -15.0f));
+				view = glm::rotate(view, glm::radians(25.0f), glm::vec3(1.0f, -1.0f, 0.0f));	// 调整观察视角
 			}
 			/* 视角变换 */
 			else {
-				// 将 cube 放置在 (0.0, 0.0, 0.0) 的位置
-				model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+				model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));   // 将 cube 放置在 (0.0, 0.0, 0.0) 的位置
 				// 初始化摄像机位置
 				float radius = 15.0f;
 				float camPosX = sin(glfwGetTime()) * radius;
@@ -236,26 +222,25 @@ int main() {
 				view = glm::lookAt(glm::vec3(camPosX, 5.0f, camPosZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				myShader.setMat4("view", view);
 			}
-			// 透视投影
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
 			projection = glm::perspective(FoV, aspect_ratio, 0.1f, 100.0f);
 		}
-		// bonus 摄像机
+		// bonus
 		if (mode == bonus) {
-			projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-			myShader.setMat4("projection", projection);
+			projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 			view = camera.GetViewMatrix();
-			myShader.setMat4("view", view);
 		}
-		else {
-			myShader.setMat4("projection", projection);
-		}
+		myShader.setMat4("projection", projection);
+		myShader.setMat4("model", model);
+		myShader.setMat4("view", view);
 
 		// 绘制顶点
 		glEnableVertexAttribArray(1);
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// 渲染 GUI
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// 检查并调用事件，交换缓冲
 		glfwSwapBuffers(window);
@@ -283,40 +268,29 @@ void processInput(GLFWwindow *window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
+		camera.moveForward(deltaTime * SPEED);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
+		camera.moveBack(deltaTime * SPEED);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
+		camera.moveLeft(deltaTime * SPEED);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
+		camera.moveRight(deltaTime * SPEED);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		camera.ProcessKeyboard(UP, deltaTime);
+		camera.moveUp(deltaTime * SPEED);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		camera.ProcessKeyboard(DOWN, deltaTime);
+		camera.moveDown(deltaTime * SPEED);
 }
 
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-	if (firstMouse)
-	{
+	if (firstMouse) {
 		lastX = xpos;
 		lastY = ypos;
 		firstMouse = false;
 	}
-
 	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
+	float yoffset = lastY - ypos;
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-	camera.ProcessMouseScroll(yoffset);
+	camera.rotate(xoffset * 0.05f, yoffset * 0.05f);
 }
