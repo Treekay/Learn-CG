@@ -112,8 +112,8 @@ int main() {
 	enum function_select { orthographic_projection, perspective_projection, bonus };
 	int mode = 0;
 	bool view_changing = false;
-	float ortho_left = -6.0f, ortho_right = 6.0f, ortho_bottom = 5.0f, ortho_top = -5.0f, ortho_near = -2.0f, ortho_far = 5.5f;
-	float FoV = glm::radians(45.0f), aspect_ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
+	float ortho_left = -9.0f, ortho_right = 5.0f, ortho_bottom = 5.5f, ortho_top = -4.5f, ortho_near = -1.0f, ortho_far = 5.5f;
+	float FoV = glm::radians(45.0f), aspect_ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT, p_near = 10.0f, p_far = 20.0f;
 
 	// VAO, VBO
 	unsigned int VBO, VAO;
@@ -165,9 +165,9 @@ int main() {
 			ImGui::Begin("ImGui");
 			ImGui::StyleColorsDark();
 			// 功能选择
-			ImGui::RadioButton("orthographic projection", &mode, 0);
-			ImGui::RadioButton("perspective projection", &mode, 1);
-			ImGui::RadioButton("bonus camera", &mode, 2);
+			ImGui::RadioButton("orthographic", &mode, 0);
+			ImGui::RadioButton("perspective", &mode, 1);
+			ImGui::RadioButton("bonus", &mode, 2);
 			ImGui::NewLine();
 			// 正交投影选项
 			if (mode == orthographic_projection) {
@@ -176,7 +176,7 @@ int main() {
 				ImGui::SliderFloat("right", &ortho_right, -20.0f, 20.0f);
 				ImGui::SliderFloat("bottom", &ortho_bottom, -20.0f, 20.0f);
 				ImGui::SliderFloat("top", &ortho_top, -20.0f, 20.0f);
-				ImGui::SliderFloat("near", &ortho_near, -3.0f, 3.0f);
+				ImGui::SliderFloat("near", &ortho_near, -3.0f, 6.0f);
 				ImGui::SliderFloat("far", &ortho_far, -10.0f, 10.0f);
 			}
 			// 透视投影选项
@@ -185,6 +185,8 @@ int main() {
 				// 参数
 				ImGui::SliderFloat("FoV", &FoV, -3.0f, 3.0f);
 				ImGui::SliderFloat("aspect-ratio", &aspect_ratio, -3.0f, 3.0f);
+				ImGui::SliderFloat("p-near", &p_near, 5.0f, 20.0f);
+				ImGui::SliderFloat("p-far", &p_far, 10.0f, 25.0f);
 			}
 			// 加分项
 			else if (mode == bonus) {
@@ -199,9 +201,11 @@ int main() {
 		glm::mat4 projection = glm::mat4(1.0f);
 		unsigned int modelLoc = glGetUniformLocation(myShader.ID, "model");
 		unsigned int viewLoc = glGetUniformLocation(myShader.ID, "view");
+		
 
 		/* 正交投影 */
 		if (mode == orthographic_projection) {
+			model = glm::translate(model, glm::vec3(-1.5f, 0.5f, -1.5f));  // 将 cube 放置在 (-1.5, 0.5, -1.5) 的位置
 			projection = glm::ortho(ortho_left, ortho_right, ortho_bottom, ortho_top, ortho_near, ortho_far);
 		}
 		/* 透视投影 */
@@ -220,9 +224,8 @@ int main() {
 				float camPosZ = cos(glfwGetTime()) * radius;
 				// 使摄像机围绕 cube 旋转，并且时刻看着 cube 中心
 				view = glm::lookAt(glm::vec3(camPosX, 5.0f, camPosZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				myShader.setMat4("view", view);
 			}
-			projection = glm::perspective(FoV, aspect_ratio, 0.1f, 100.0f);
+			projection = glm::perspective(FoV, aspect_ratio, p_near, p_far);
 		}
 		// bonus
 		if (mode == bonus) {
@@ -292,5 +295,5 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.rotate(xoffset * 0.05f, yoffset * 0.05f);
+	camera.rotate(xoffset * 0.25f, yoffset * 0.25f);
 }
