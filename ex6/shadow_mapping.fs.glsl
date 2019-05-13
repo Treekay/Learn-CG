@@ -30,12 +30,12 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 
     // 取得当前片元在光源视角下的深度
     float currentDepth = projCoords.z;
+
+    // 检查当前片元是否在阴影中
     vec3 normal = normalize(fs_in.Normal);
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
     float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-
-    // 检查当前片元是否在阴影中
-    // PCF
+    // PCF 柔和阴影
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     for(int x = -1; x <= 1; ++x) {

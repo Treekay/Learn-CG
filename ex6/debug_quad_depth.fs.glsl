@@ -6,7 +6,7 @@ in vec2 TexCoords;
 uniform sampler2D depthMap;
 uniform float near_plane;
 uniform float far_plane;
-uniform bool mode;
+uniform int mode;
 
 // required when using a perspective projection matrix
 float LinearizeDepth(float depth) {
