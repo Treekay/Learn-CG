@@ -21,15 +21,19 @@ uniform bool shadows;
 float ShadowCalculation(vec4 fragPosLightSpace) {
     // 执行透视除法
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
     // 变换到[0,1]的范围
     projCoords = projCoords * 0.5 + 0.5;
+
     // 取得最近点的深度(使用[0,1]范围下的fragPosLight当坐标)
     float closestDepth = texture(shadowMap, projCoords.xy).r; 
+
     // 取得当前片元在光源视角下的深度
     float currentDepth = projCoords.z;
     vec3 normal = normalize(fs_in.Normal);
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
     float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+
     // 检查当前片元是否在阴影中
     // PCF
     float shadow = 0.0;
@@ -49,12 +53,11 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
     return shadow;
 }
 
-void main()
-{           
+void main() {           
     vec3 normal = normalize(fs_in.Normal);
 
     // Ambient
-    vec3 ambient = 0.2 * lightColor;
+    vec3 ambient = 0.2 * objectColor;
 
     // Diffuse
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
