@@ -286,7 +286,6 @@ int main() {
 		// 将两个矩阵结合提供一个光空间的变换矩阵，用该矩阵将每个世界空间坐标变换到光源处所见到的那个空间
 		lightSpaceMatrix = lightProjection * lightView;
 
-
 		simpleDepthShader.use();
 		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 		simpleDepthShader.setMat4("model", model);
