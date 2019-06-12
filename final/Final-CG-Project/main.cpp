@@ -10,9 +10,10 @@
 #include "Camera.h"
 #include "Shader.h"
 #include "Object.h"
-#include "Cube.h"
-#include "Plane.h"
-#include "Bound.h"
+#include "Vertices.h"
+#include "Positions.h"
+#include "skybox.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -72,7 +73,7 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);  // 次版本号 3
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 使用核心模式
 
-																	// 创建一个窗口对象
+	// 创建一个窗口对象
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "CG-Project", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -93,133 +94,123 @@ int main() {
 		return -1;
 	}
 
-	// 创建着色器
-	Shader lightShadowShader("../../final/lightShadowShader.vs.glsl", "../../final/lightShadowShader.fs.glsl");
-	Shader cubeShader("../../final/cubeShader.vs.glsl", "../../final/cubeShader.fs.glsl");
-	Shader lampShader("../../final/lamp.vs.glsl", "../../final/lamp.fs.glsl");
+	// configure global opengl state
+	glEnable(GL_DEPTH_TEST);
 
-	//光源顶点
-	unsigned int lampVAO = 0;
-	unsigned int lampVBO = 0;
-	glGenVertexArrays(1, &lampVAO);
-	glBindVertexArray(lampVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	// 加载纹理
+	unsigned int groundTexture = loadTexture("assets/wood.png");
+	unsigned int wallTexture = loadTexture("assets/wood.png");
+	unsigned int boxTexture = loadTexture("assets/box.jpg");
 
-	Object bound(cubeVertices, &lightShadowShader);
-	Object plane(planeVertices, &lightShadowShader);
-
-	// 为渲染的深度贴图创建一个帧缓冲对象
+	// configure depth map FBO
+	// -----------------------
 	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	unsigned int depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
-	// 创建一个2D纹理，提供给帧缓冲的深度缓冲使用
+	// create depth texture
 	unsigned int depthMap;
-	unsigned int woodTexture = 0;
 	glGenTextures(1, &depthMap);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
-
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	// 生成的深度纹理作为帧缓冲的深度缓冲
 	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	// attach depth texture as FBO's depth buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glEnable(GL_DEPTH_TEST);
 
-	glm::vec3 lightPos(1.0f, 3.0f, 1.0f);
+	// 创建着色器
+	Shader shader("glsl/shader.vs.glsl", "glsl/shader.fs.glsl");
+	Shader depthShader("glsl/depth.vs.glsl", "glsl/depth.fs.glsl");
+	Shader skyboxShader("glsl/skyboxShader.vs.glsl", "glsl/skyboxShader.fs.glsl");
 
-	// 循环渲染
+	// 创建对象
+	Object ground(planeVertices, &shader, groundTexture);
+	Object wall(cubeVertices, &shader, wallTexture);
+	Object box(cubeVertices, &shader, boxTexture);
+	
+	//创建天空盒
+	Skybox skybox(&skyboxShader);
+
+	// 配置着色器
+	shader.use();
+	shader.setInt("diffuseTexture", 0);
+	shader.setInt("shadowMap", 1);
+
+	glm::vec3 lightPos(-5.0f, 7.0f, 3.0f);
+
+	// 渲染
 	while (!glfwWindowShouldClose(window)) {
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// 输入
+		// input
 		processInput(window);
 
-		// 渲染 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		// render
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// 创建坐标变换
-		glm::mat4 model = glm::mat4(1.0f);
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		glm::mat4 view = camera.GetViewMatrix(); 
-
-		// 用透视投影的方式
-		glm::mat4 lightProjection = glm::perspective(45.0f, (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.0f, 7.5f);
-		// 创建一个视图矩阵来变换每个物体，把它们变换到从光源视角可见的空间中
-		glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-		// 将两个矩阵结合提供一个光空间的变换矩阵，用该矩阵将每个世界空间坐标变换到光源处所见到的那个空间
-		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-		// 绘制立方体
-		cubeShader.use();
-		cubeShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-		cubeShader.setMat4("model", model);
+		glm::mat4 lightProjection, lightView;
+		glm::mat4 lightSpaceMatrix;
+		float near_plane = 1.0f, far_plane = 7.5f;
+		//lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); // note that if you use a perspective projection matrix you'll have to change the light position as the current light position isn't enough to reflect the whole scene
+		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+		lightSpaceMatrix = lightProjection * lightView;
+		// render scene from light's point of view
+		depthShader.use();
+		depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glCullFace(GL_FRONT);
-		plane.Render(6);
-		bound.Render(boundPositions);
+		ground.Render(groundPositions, 6);
+		wall.Render(wallPositions, 48);
+		box.Render(boxPositions, 48);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glCullFace(GL_BACK);
 
-		// 清除缓存
+		// reset viewport
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// 光照阴影
-		lightShadowShader.use();
-		lightShadowShader.setInt("diffuseTexture", 0);
-		lightShadowShader.setInt("shadowMap", 1);
-		lightShadowShader.setMat4("projection", projection);
-		lightShadowShader.setMat4("view", view);
-		lightShadowShader.setMat4("model", model);
-		lightShadowShader.setVec3("lightPos", lightPos);
-		lightShadowShader.setVec3("viewPos", camera.Position);
-		lightShadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-		lightShadowShader.setBool("shadows", true);
-		lightShadowShader.setVec3("objectColor", 1.0f, 0.5f, 0.3f);
-		lightShadowShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		// 2. render scene as normal using the generated depth/shadow map  
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, woodTexture);
+		// 创建坐标
+		shader.use();
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+		shader.setMat4("projection", projection);
+		shader.setMat4("view", view);
+		// set light uniforms
+		shader.setVec3("viewPos", camera.Position);
+		shader.setVec3("lightPos", lightPos);
+		shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		// 渲染物体
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
+		ground.Render(groundPositions, 6);
+		wall.Render(wallPositions, 48);
+		box.Render(boxPositions, 48);
 
-		plane.Render(6);
-		bound.Render(boundPositions);
-
-		// 绘制光源顶点
-		lampShader.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(0.3f));
-		lampShader.setMat4("projection", projection);
-		lampShader.setMat4("view", view);
-		lampShader.setMat4("model", model);
-		glBindVertexArray(lampVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		// 渲染天空盒
+		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+		skybox.render(view, projection);
 
 		// 检查并调用事件，交换缓冲
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-	// 清除所有申请的 GLFW 资源
+
 	glfwTerminate();
 	return 0;
 }
